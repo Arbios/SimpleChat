@@ -13,7 +13,6 @@ protocol DialogueRouterInput: AnyObject {
 
 final class DialogueRouter {
     weak var view: DialogueViewInput?
-
     private var viewController: UIViewController? {
         view as? UIViewController
     }

@@ -10,7 +10,7 @@ import UIKit
 final class DialoguePresenter {
     let router: DialogueRouterInput
     let dialogueInteractor: DialogueInteractor
-
+    
     weak var view: DialogueViewInput?
     weak var output: DialogueOutput?
 
@@ -23,21 +23,20 @@ final class DialoguePresenter {
 // MARK: - DialogueViewOutput
 
 extension DialoguePresenter: DialogueViewOutput {
-
     func viewDidLoad() {
         view?.configure()
     }
 
     func sendMessageDidTap(message: String) {
-        dialogueInteractor.sendMessage(message)
+        dialogueInteractor.userDidSendMessage(message)
     }
 }
 
 // MARK: - DialogueInteractorOutput
 
 extension DialoguePresenter: DialogueInteractorOutput {
-    func userDidSendMessage(_ message: String) {
-        print("\(#function) - \(message)")
+    func didProcessMessage(_ message: Message) {
+        view?.didReceiveMessage(message: message)
     }
 }
 
