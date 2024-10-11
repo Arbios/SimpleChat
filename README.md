@@ -23,9 +23,3 @@ SimpleChat - это простое чат-приложение, разработ
 - UICollectionView (UICollectionViewDiffableDataSource и UICollectionViewCompositionalLayout)
 - VIPER архитектура
 - Structured Concurrency для обработки в фоновом потоке
-
-## Как запустить проект
-
-1. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/<your_username>/SimpleChat.git
