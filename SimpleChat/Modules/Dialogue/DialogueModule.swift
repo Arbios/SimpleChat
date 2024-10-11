@@ -18,27 +18,21 @@ final class DialogueModule {
     let presenter: DialoguePresenter
     let router: DialogueRouter
     let dialogueInteractor: DialogueInteractor
-
+    
     var output: DialogueOutput? {
         get { presenter.output }
         set { presenter.output = newValue }
     }
     var input: DialogueInput { presenter }
 
-
     init() {
         dialogueInteractor = DialogueInteractor()
-
         view = DialogueViewController()
         router = DialogueRouter()
         presenter = DialoguePresenter(router: router, dialogueInteractor: dialogueInteractor)
-
         view.output = presenter
-
         presenter.view = view
-
         router.view = view
-
         dialogueInteractor.output = presenter
     }
 }
