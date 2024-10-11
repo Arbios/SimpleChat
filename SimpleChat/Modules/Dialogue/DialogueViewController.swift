@@ -24,7 +24,7 @@ final class DialogueViewController: UIViewController {
 
     private enum Constants {
         static let itemSpacing: CGFloat = 10
-        static let sectionInsets = NSDirectionalEdgeInsets(top: 10, leading: 10, bottom: 70, trailing: 10)
+        static let sectionInsets = NSDirectionalEdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
         static let textFieldHeight: CGFloat = 50
         static let textFieldCornerRadius: CGFloat = 25
         static let textFieldPadding: CGFloat = 15
@@ -33,12 +33,52 @@ final class DialogueViewController: UIViewController {
         static let animationDuration: TimeInterval = 0.3
         static let keyboardBottomInset: CGFloat = 0
         static let maxCharacterLimit = 300
+        static let backgroundColor = UIColor.systemGray6
+        static let textFieldBackgroundColor = UIColor.white
     }
 
     var output: DialogueViewOutput?
-    var collectionView: UICollectionView!
-    var dataSource: UICollectionViewDiffableDataSource<Section, Message>!
-    lazy var textField = UITextField()
+    
+    private var dataSource: UICollectionViewDiffableDataSource<Section, Message>!
+    private lazy var textField: UITextField = {
+        let textField = UITextField()
+        textField.backgroundColor = Constants.textFieldBackgroundColor
+        textField.layer.cornerRadius = Constants.textFieldCornerRadius
+        textField.layer.masksToBounds = true
+        textField.borderStyle = .none
+        textField.delegate = self
+        let paddingView = UIView(frame: CGRect(x: .zero, y: .zero, width: Constants.textFieldPadding, height: Constants.textFieldHeight))
+        textField.leftView = paddingView
+        textField.leftViewMode = .always
+
+        let sendButton = UIButton(type: .system)
+        if let sendIcon = UIImage(named: "sendIcon") {
+            sendButton.setImage(sendIcon, for: .normal)
+        }
+        sendButton.imageView?.clipsToBounds = true
+        sendButton.frame = CGRect(origin: .zero, size: Constants.sendButtonSize)
+        sendButton.imageView?.contentMode = .scaleAspectFit
+        sendButton.addTarget(self, action: #selector(sendButtonTapped), for: .touchUpInside)
+
+        let sendButtonContainer = UIView(frame: CGRect(x: .zero, y: .zero, width: Constants.sendButtonSize.width + Constants.sendButtonTrailingPadding, height: Constants.sendButtonSize.height))
+        sendButtonContainer.addSubview(sendButton)
+
+        textField.rightView = sendButtonContainer
+        textField.rightViewMode = .always
+        return textField
+    }()
+    private var textFieldBackgroundView: UIView = {
+        let view = UIView()
+        view.backgroundColor = Constants.backgroundColor
+        return view
+    }()
+    private lazy var collectionView: UICollectionView = {
+        let collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: createLayout())
+        collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        collectionView.backgroundColor = Constants.backgroundColor
+        collectionView.register(MessageCell.self, forCellWithReuseIdentifier: MessageCell.reuseIdentifier)
+        return collectionView
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,6 +88,16 @@ final class DialogueViewController: UIViewController {
         applyInitialSnapshot()
         configureKeyboardNotifications()
         configureGestures()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        setUpLayout()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
     }
 }
 
@@ -84,8 +134,8 @@ private extension DialogueViewController {
 
         // Данные для теста
         snapshot.appendItems([
-            Message(id: UUID(), text: "Привет, как дела?", isSentByCurrentUser: true),
-            Message(id: UUID(), text: "Все отлично! Как у тебя?", isSentByCurrentUser: false),
+            Message(id: UUID(), text: "Hi, how are you?", isSentByCurrentUser: true),
+            Message(id: UUID(), text: "I'm fine! Thanks for asking. How about you?", isSentByCurrentUser: false),
         ], toSection: .main)
         dataSource.apply(snapshot, animatingDifferences: true)
     }
@@ -123,76 +173,51 @@ private extension DialogueViewController {
     }
 
     func adjustForKeyboard(isShowing: Bool, keyboardHeight: CGFloat) {
-        let bottomInset = isShowing ? keyboardHeight : Constants.keyboardBottomInset
+        let bottomInset = isShowing ? keyboardHeight - view.safeAreaInsets.bottom : Constants.keyboardBottomInset
+
         collectionView.contentInset.bottom = bottomInset
         collectionView.verticalScrollIndicatorInsets.bottom = bottomInset
 
+        let translationY = isShowing ? -bottomInset : 0
         UIView.animate(withDuration: Constants.animationDuration) {
-            self.textField.transform = CGAffineTransform(translationX: 0, y: -bottomInset)
+            self.textFieldBackgroundView.transform = CGAffineTransform(translationX: 0, y: translationY)
         }
+    }
+
+    func setUpViews() {
+        view.backgroundColor = Constants.backgroundColor
+        view.addSubview(collectionView)
+        view.addSubview(textFieldBackgroundView)
+        textFieldBackgroundView.addSubview(textField)
     }
 
     func setUpLayout() {
         textField.translatesAutoresizingMaskIntoConstraints = false
         collectionView.translatesAutoresizingMaskIntoConstraints = false
-
-        view.addSubview(collectionView)
-        view.addSubview(textField)
+        textFieldBackgroundView.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: textFieldBackgroundView.topAnchor),
 
-            textField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: Constants.itemSpacing),
-            textField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -Constants.itemSpacing),
-            textField.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            textFieldBackgroundView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            textFieldBackgroundView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            textFieldBackgroundView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            textFieldBackgroundView.heightAnchor.constraint(equalToConstant: Constants.textFieldHeight + Constants.itemSpacing),
+
+            textField.leadingAnchor.constraint(equalTo: textFieldBackgroundView.leadingAnchor, constant: Constants.itemSpacing),
+            textField.trailingAnchor.constraint(equalTo: textFieldBackgroundView.trailingAnchor, constant: -Constants.itemSpacing),
+            textField.topAnchor.constraint(equalTo: textFieldBackgroundView.topAnchor),
             textField.heightAnchor.constraint(equalToConstant: Constants.textFieldHeight)
         ])
     }
-
-    func setUpViews() {
-        collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: createLayout())
-        collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        collectionView.backgroundColor = .systemGray6
-        view.addSubview(collectionView)
-        collectionView.register(MessageCell.self, forCellWithReuseIdentifier: MessageCell.reuseIdentifier)
-
-        textField.backgroundColor = .white
-        textField.layer.cornerRadius = Constants.textFieldCornerRadius
-        textField.layer.masksToBounds = true
-        textField.borderStyle = .none
-        textField.delegate = self
-
-        let paddingView = UIView(frame: CGRect(x: 0, y: 0, width: Constants.textFieldPadding, height: Constants.textFieldHeight))
-        textField.leftView = paddingView
-        textField.leftViewMode = .always
-
-        let sendButton = UIButton(type: .system)
-        if let sendIcon = UIImage(named: "sendIcon") {
-            sendButton.setImage(sendIcon, for: .normal)
-        }
-        sendButton.imageView?.clipsToBounds = true
-        sendButton.frame = CGRect(origin: .zero, size: Constants.sendButtonSize)
-        sendButton.imageView?.contentMode = .scaleAspectFit
-        sendButton.addTarget(self, action: #selector(sendButtonTapped), for: .touchUpInside)
-
-        let sendButtonContainer = UIView(frame: CGRect(x: 0, y: 0, width: Constants.sendButtonSize.width + Constants.sendButtonTrailingPadding, height: Constants.sendButtonSize.height))
-        sendButtonContainer.addSubview(sendButton)
-
-        textField.rightView = sendButtonContainer
-        textField.rightViewMode = .always
-
-        view.addSubview(textField)
-    }
-
 }
 
 extension DialogueViewController: DialogueViewInput {
     func configure() {
         setUpViews()
-        setUpLayout()
     }
 
     func didReceiveMessage(message: Message) {
@@ -208,7 +233,7 @@ extension DialogueViewController: DialogueViewInput {
 extension DialogueViewController: UITextFieldDelegate {
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         let currentText = textField.text ?? ""
-        let updatedText = (currentText as NSString).replacingCharacters(in: range, with: string)
-        return updatedText.count <= Constants.maxCharacterLimit
+        let newLength = currentText.count + string.count - range.length
+        return newLength <= Constants.maxCharacterLimit
     }
 }

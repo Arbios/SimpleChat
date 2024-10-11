@@ -15,6 +15,7 @@ class MessageCell: UICollectionViewCell {
         static let bubbleTopBottomPadding: CGFloat = 5
         static let bubbleHorizontalPadding: CGFloat = 10
         static let messageLabelPadding: CGFloat = 15
+        static let messageLabelNumberOfLines = 0
         static let maxBubbleWidthMultiplier: CGFloat = 0.75
         static let messageFontSize: CGFloat = 13
         static let sentByCurrentUserBackgroundColor = UIColor.black
@@ -36,16 +37,19 @@ class MessageCell: UICollectionViewCell {
         bubbleBackgroundView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(bubbleBackgroundView)
 
-        messageLabel.numberOfLines = 0
+        messageLabel.numberOfLines = Constants.messageLabelNumberOfLines
         messageLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(messageLabel)
 
         bubbleLeadingConstraint = bubbleBackgroundView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Constants.bubbleHorizontalPadding)
+        bubbleLeadingConstraint?.priority = UILayoutPriority(999)
         bubbleTrailingConstraint = bubbleBackgroundView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Constants.bubbleHorizontalPadding)
+        bubbleTrailingConstraint?.priority = UILayoutPriority(999)
 
         let constraints = [
             bubbleBackgroundView.topAnchor.constraint(equalTo: topAnchor, constant: Constants.bubbleTopBottomPadding),
             bubbleBackgroundView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -Constants.bubbleTopBottomPadding),
+            bubbleBackgroundView.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, multiplier: Constants.maxBubbleWidthMultiplier),
 
             messageLabel.topAnchor.constraint(equalTo: bubbleBackgroundView.topAnchor, constant: Constants.messageLabelPadding),
             messageLabel.bottomAnchor.constraint(equalTo: bubbleBackgroundView.bottomAnchor, constant: -Constants.messageLabelPadding),
